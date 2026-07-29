@@ -621,10 +621,15 @@
                 
                 const cells = parseCSVLine(line);
                 if (!cells[3]) continue;
-                if (cells[3].includes('(extra)')) continue;
                 
-                const checkIn = parseDate(cells[1]);
-                const checkOut = parseDate(cells[2]);
+                const checkInStr = cells[1] ? cells[1].trim() : '';
+                const checkOutStr = cells[2] ? cells[2].trim() : '';
+                
+                // Skip if missing check-in OR check-out date
+                if (!checkInStr || !checkOutStr) continue;
+                
+                const checkIn = parseDate(checkInStr);
+                const checkOut = parseDate(checkOutStr);
                 
                 if (!checkIn || !checkOut) continue;
                 
