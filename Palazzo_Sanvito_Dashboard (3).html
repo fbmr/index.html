@@ -1,0 +1,919 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Palazzo Sanvito — KPI Dashboard</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            color: #1a1a1a;
+            padding: 2rem;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            margin-bottom: 2rem;
+        }
+
+        .header h1 {
+            font-size: 28px;
+            font-weight: 500;
+            margin-bottom: 0.5rem;
+            color: #1a1a1a;
+        }
+
+        .header p {
+            font-size: 14px;
+            color: #666;
+        }
+
+        .upload-area {
+            background: white;
+            border: 2px dashed #ccc;
+            border-radius: 12px;
+            padding: 3rem 2rem;
+            text-align: center;
+            cursor: pointer;
+            margin-bottom: 2rem;
+            transition: all 0.2s;
+        }
+
+        .upload-area:hover {
+            border-color: #999;
+            background: #fafafa;
+        }
+
+        .upload-area.dragover {
+            border-color: #185FA5;
+            background: #e6f1fb;
+        }
+
+        .upload-area svg {
+            width: 40px;
+            height: 40px;
+            margin-bottom: 12px;
+            opacity: 0.6;
+        }
+
+        .upload-area p {
+            margin: 0.5rem 0;
+            font-size: 14px;
+        }
+
+        .upload-area .main-text {
+            font-weight: 500;
+            color: #1a1a1a;
+            font-size: 16px;
+        }
+
+        .upload-area .sub-text {
+            color: #666;
+            font-size: 13px;
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        .dashboard {
+            display: none;
+        }
+
+        .dashboard.active {
+            display: block;
+        }
+
+        .tab-buttons {
+            display: flex;
+            gap: 0;
+            margin-bottom: 2rem;
+            border-bottom: 1px solid #ddd;
+            background: white;
+            margin: -2rem) -2rem 2rem -2rem;
+            padding: 0 2rem;
+        }
+
+        .tab-button {
+            padding: 16px 20px;
+            border: none;
+            background: transparent;
+            color: #666;
+            border-bottom: 2px solid transparent;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .tab-button:hover {
+            color: #1a1a1a;
+        }
+
+        .tab-button.active {
+            color: #1a1a1a;
+            border-bottom-color: #185FA5;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 12px;
+            margin-bottom: 2rem;
+        }
+
+        .metric-card {
+            background: white;
+            padding: 1.25rem;
+            border-radius: 8px;
+            border: 0.5px solid #ddd;
+        }
+
+        .metric-label {
+            font-size: 11px;
+            color: #999;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 600;
+        }
+
+        .metric-value {
+            font-size: 26px;
+            font-weight: 500;
+            color: #1a1a1a;
+        }
+
+        .chart-container {
+            background: white;
+            border: 0.5px solid #ddd;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .chart-container h3 {
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 1rem;
+            color: #1a1a1a;
+        }
+
+        .chart-wrapper {
+            position: relative;
+            width: 100%;
+            height: 240px;
+        }
+
+        .table-container {
+            background: white;
+            border-radius: 8px;
+            border: 0.5px solid #ddd;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            overflow-x: auto;
+        }
+
+        .table-container h3 {
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 1rem;
+            color: #1a1a1a;
+        }
+
+        table {
+            width: 100%;
+            font-size: 13px;
+            border-collapse: collapse;
+        }
+
+        thead {
+            background: #f9f9f9;
+        }
+
+        th {
+            text-align: left;
+            padding: 12px 0;
+            font-weight: 600;
+            color: #666;
+            border-bottom: 0.5px solid #ddd;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        td {
+            padding: 12px 0;
+            color: #333;
+            border-bottom: 0.5px solid #eee;
+        }
+
+        tr:hover {
+            background: #fafafa;
+        }
+
+        tr:nth-child(even) {
+            background: #fafafa;
+        }
+
+        tr:nth-child(even):hover {
+            background: #f0f0f0;
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding: 1rem;
+            }
+
+            .header h1 {
+                font-size: 22px;
+            }
+
+            .metrics-grid {
+                grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            }
+
+            .tab-buttons {
+                overflow-x: auto;
+                padding: 0 1rem;
+            }
+
+            .chart-wrapper {
+                height: 200px;
+            }
+        }
+
+        .error-msg {
+            background: #fef2f2;
+            color: #991b1b;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            border: 1px solid #fecaca;
+        }
+
+        .success-msg {
+            background: #f0fdf4;
+            color: #15803d;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            border: 1px solid #bbf7d0;
+        }
+
+        button {
+            transition: all 0.2s;
+        }
+
+        button:hover {
+            opacity: 0.9;
+            transform: translateY(-1px);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Palazzo Sanvito — KPI Dashboard</h1>
+            <p>Synced with your Google Sheets (2026 tab) - Last updated: <span id="lastUpdated">never</span></p>
+        </div>
+
+        <div style="display: flex; gap: 1rem; margin-bottom: 2rem;">
+            <div class="upload-area" style="flex: 1; cursor: pointer; margin-bottom: 0;" onclick="document.getElementById('fileInput').click();" id="uploadArea">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="16 16 12 12 8 16"></polyline>
+                    <line x1="12" y1="12" x2="12" y2="21"></line>
+                    <path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"></path>
+                </svg>
+                <p class="main-text">Or upload CSV manually</p>
+                <p class="sub-text">Fallback option</p>
+            </div>
+            <button onclick="loadFromDropbox()" style="padding: 1rem 2rem; background: #185FA5; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 500; font-size: 14px; white-space: nowrap;">
+                🔄 Refresh from Google Sheets
+            </button>
+        </div>
+
+        <input type="file" id="fileInput" accept=".csv" />
+        <div id="messageArea"></div>
+
+        <div class="dashboard" id="dashboard">
+            <div class="tab-buttons">
+                <button class="tab-button active" onclick="switchTab('overview', event)">Overview</button>
+                <button class="tab-button" onclick="switchTab('monthly', event)">Monthly</button>
+                <button class="tab-button" onclick="switchTab('agencies', event)">Agencies</button>
+                <button class="tab-button" onclick="switchTab('bookings', event)">Bookings</button>
+            </div>
+
+            <!-- Overview Tab -->
+            <div id="overview" class="tab-content active">
+                <div class="metrics-grid">
+                    <div class="metric-card">
+                        <div class="metric-label">Net revenue</div>
+                        <div class="metric-value" id="totalRevenue">€0</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Bookings</div>
+                        <div class="metric-value" id="totalBookings">0</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Total nights</div>
+                        <div class="metric-value" id="totalNights">0</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Occupancy</div>
+                        <div class="metric-value" id="occupancyRate">0%</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Avg per night</div>
+                        <div class="metric-value" id="avgPerNight">€0</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Peak season</div>
+                        <div class="metric-value" id="peakOccupancy">0%</div>
+                    </div>
+                </div>
+
+                <div class="chart-container">
+                    <h3>Monthly revenue</h3>
+                    <div class="chart-wrapper">
+                        <canvas id="revenueChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="chart-container">
+                    <h3>Monthly occupancy</h3>
+                    <div class="chart-wrapper">
+                        <canvas id="occupancyChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Monthly Tab -->
+            <div id="monthly" class="tab-content">
+                <div class="table-container">
+                    <h3>Monthly breakdown</h3>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Month</th>
+                                <th style="text-align: right;">Nights</th>
+                                <th style="text-align: right;">Days</th>
+                                <th style="text-align: right;">Occupancy</th>
+                                <th style="text-align: right;">Revenue</th>
+                                <th style="text-align: right;">Avg per night</th>
+                            </tr>
+                        </thead>
+                        <tbody id="monthlyTable"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Agencies Tab -->
+            <div id="agencies" class="tab-content">
+                <div class="chart-container">
+                    <h3>Revenue by agency</h3>
+                    <div class="chart-wrapper">
+                        <canvas id="agencyChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="table-container">
+                    <h3>Agency performance</h3>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Agency</th>
+                                <th style="text-align: right;">Bookings</th>
+                                <th style="text-align: right;">Nights</th>
+                                <th style="text-align: right;">Revenue</th>
+                                <th style="text-align: right;">Rev %</th>
+                                <th style="text-align: right;">Nights %</th>
+                                <th style="text-align: right;">€/Night</th>
+                            </tr>
+                        </thead>
+                        <tbody id="agencyTable"></tbody>
+                    </table>
+                </div>
+
+                <div class="table-container">
+                    <h3>Commission fees by agency</h3>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Agency</th>
+                                <th style="text-align: right;">Bookings</th>
+                                <th style="text-align: right;">Total commissions</th>
+                                <th style="text-align: right;">Avg per booking</th>
+                                <th style="text-align: right;">% of revenue</th>
+                            </tr>
+                        </thead>
+                        <tbody id="agencyCommissionsTable"></tbody>
+                    </table>
+                </div>
+
+                <div class="table-container">
+                    <h3>Bookings by agency</h3>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Agency</th>
+                                <th>Guest</th>
+                                <th>Check-in</th>
+                                <th style="text-align: right;">Nights</th>
+                                <th style="text-align: right;">Revenue</th>
+                            </tr>
+                        </thead>
+                        <tbody id="agencyBookingsTable"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Bookings Tab -->
+            <div id="bookings" class="tab-content">
+                <div class="table-container">
+                    <h3>All bookings</h3>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Guest</th>
+                                <th>Check-in</th>
+                                <th style="text-align: right;">Nights</th>
+                                <th style="text-align: right;">Revenue</th>
+                                <th>Agency</th>
+                            </tr>
+                        </thead>
+                        <tbody id="bookingsTable"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const GOOGLE_SHEETS_URL = 'https://docs.google.com/spreadsheets/d/1aI3u0HLM7zlfL5fkq_LLhbiTeQNhoQH89H46Am05Jko/export?format=csv&gid=50956777';
+        let charts = {};
+
+        // Load from Google Sheets on page load
+        window.addEventListener('load', () => {
+            console.log('Page loaded, attempting to fetch from Google Sheets...');
+            setTimeout(() => {
+                console.log('Calling loadFromDropbox...');
+                loadFromDropbox();
+            }, 1000);
+        });
+
+        // Also try immediately
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', () => {
+                console.log('DOM loaded');
+            });
+        } else {
+            console.log('DOM already ready, loading data...');
+            setTimeout(loadFromDropbox, 1000);
+        }
+
+        // Event listeners
+        document.getElementById('fileInput').addEventListener('change', handleFileUpload);
+        
+        document.getElementById('uploadArea').addEventListener('dragover', (e) => {
+            e.preventDefault();
+            document.getElementById('uploadArea').classList.add('dragover');
+        });
+
+        document.getElementById('uploadArea').addEventListener('dragleave', () => {
+            document.getElementById('uploadArea').classList.remove('dragover');
+        });
+
+        document.getElementById('uploadArea').addEventListener('drop', (e) => {
+            e.preventDefault();
+            document.getElementById('uploadArea').classList.remove('dragover');
+            const file = e.dataTransfer.files[0];
+            processFile(file);
+        });
+
+        async function loadFromDropbox() {
+            try {
+                console.log('Starting fetch from Google Sheets URL:', GOOGLE_SHEETS_URL);
+                showMessage('Loading from Google Sheets...', 'success');
+                
+                const response = await fetch(GOOGLE_SHEETS_URL);
+                console.log('Fetch response status:', response.status, response.statusText);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const csv = await response.text();
+                console.log('CSV fetched, first 200 chars:', csv.substring(0, 200));
+                
+                const bookings = parseBookings(csv);
+                console.log('Bookings parsed:', bookings.length);
+                
+                if (bookings.length === 0) {
+                    showMessage('No valid bookings found in the sheet', 'error');
+                    return;
+                }
+                
+                updateLastUpdated();
+                showMessage(`✓ Successfully loaded ${bookings.length} bookings from Google Sheets`, 'success');
+                displayDashboard(bookings);
+            } catch (err) {
+                console.error('Full error:', err);
+                showMessage('Error loading from Google Sheets: ' + err.message, 'error');
+            }
+        }
+
+        function updateLastUpdated() {
+            const now = new Date();
+            const timeString = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+            const dateString = now.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+            document.getElementById('lastUpdated').textContent = `${dateString} at ${timeString}`;
+        }
+
+        function handleFileUpload(e) {
+            const file = e.target.files[0];
+            processFile(file);
+        }
+
+        function processFile(file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const csv = e.target.result;
+                    const bookings = parseBookings(csv);
+                    
+                    if (bookings.length === 0) {
+                        showMessage('No valid bookings found in file', 'error');
+                        return;
+                    }
+                    
+                    updateLastUpdated();
+                    showMessage(`Successfully loaded ${bookings.length} bookings`, 'success');
+                    displayDashboard(bookings);
+                } catch (err) {
+                    showMessage('Error parsing file: ' + err.message, 'error');
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        function showMessage(msg, type) {
+            const msgArea = document.getElementById('messageArea');
+            const className = type === 'error' ? 'error-msg' : 'success-msg';
+            msgArea.innerHTML = `<div class="${className}">${msg}</div>`;
+        }
+
+        function parseBookings(csv) {
+            const lines = csv.split('\n');
+            const bookings = [];
+            
+            for (let i = 4; i < lines.length; i++) {
+                const line = lines[i].trim();
+                if (!line) continue;
+                
+                const cells = parseCSVLine(line);
+                if (!cells[3]) continue;
+                if (cells[3].includes('(extra)')) continue;
+                
+                const checkIn = parseDate(cells[1]);
+                const checkOut = parseDate(cells[2]);
+                
+                if (!checkIn || !checkOut) continue;
+                
+                const guest = cells[3].trim();
+                const revenue = parseCurrency(cells[5]);
+                const agency = cells[20] ? cells[20].trim() : '';
+                const nights = Math.floor((checkOut - checkIn) / (1000 * 60 * 60 * 24));
+                
+                if (nights > 0 && revenue > 0 && guest) {
+                    bookings.push({
+                        guest: guest,
+                        checkIn: checkIn,
+                        checkOut: checkOut,
+                        nights: nights,
+                        revenue: revenue,
+                        commissionPartner: parseCurrency(cells[9]),
+                        agency: normalizeAgency(agency)
+                    });
+                }
+            }
+            
+            return bookings;
+        }
+
+        function parseCSVLine(line) {
+            const result = [];
+            let current = '';
+            let inQuotes = false;
+            
+            for (let i = 0; i < line.length; i++) {
+                const char = line[i];
+                if (char === '"') {
+                    inQuotes = !inQuotes;
+                } else if (char === ',' && !inQuotes) {
+                    result.push(current.trim());
+                    current = '';
+                } else {
+                    current += char;
+                }
+            }
+            result.push(current.trim());
+            return result;
+        }
+
+        function parseDate(str) {
+            if (!str) return null;
+            const parts = str.split('-');
+            const months = {Jan:0,Feb:1,Mar:2,Apr:3,May:4,Jun:5,Jul:6,Aug:7,Sep:8,Oct:9,Nov:10,Dec:11};
+            
+            if (parts.length === 3) {
+                const day = parseInt(parts[0]);
+                const month = months[parts[1]];
+                const yr = parseInt(parts[2]);
+                const year = yr < 100 ? 2000 + yr : yr;
+                return new Date(year, month, day);
+            } else if (parts.length === 2) {
+                const day = parseInt(parts[0]);
+                const month = months[parts[1]];
+                return new Date(2026, month, day);
+            }
+            return null;
+        }
+
+        function parseCurrency(str) {
+            if (!str) return 0;
+            let cleaned = str.replace(/"/g, '').replace(/€/g, '').replace(/\s/g, '').replace(/,/g, '');
+            const num = parseFloat(cleaned);
+            return isNaN(num) ? 0 : num;
+        }
+
+        function normalizeAgency(str) {
+            if (!str) return 'Unknown';
+            const lower = str.toLowerCase();
+            if (lower.includes('airbnb')) return 'Airbnb';
+            if (lower.includes('le collectionist')) return 'Le Collectionist';
+            return str;
+        }
+
+        function displayDashboard(bookings) {
+            document.getElementById('dashboard').classList.add('active');
+            
+            const totalRev = bookings.reduce((s, b) => s + b.revenue, 0);
+            const totalNights = bookings.reduce((s, b) => s + b.nights, 0);
+            const peakNights = bookings.filter(b => b.checkIn.getMonth() >= 4 && b.checkIn.getMonth() <= 8)
+                .reduce((s, b) => s + b.nights, 0);
+            
+            document.getElementById('totalRevenue').textContent = '€' + Math.round(totalRev).toLocaleString('it-IT');
+            document.getElementById('totalBookings').textContent = bookings.length;
+            document.getElementById('totalNights').textContent = totalNights;
+            document.getElementById('occupancyRate').textContent = Math.round((totalNights / 365) * 100) + '%';
+            document.getElementById('avgPerNight').textContent = '€' + Math.round(totalRev / totalNights).toLocaleString('it-IT');
+            document.getElementById('peakOccupancy').textContent = Math.round((peakNights / 153) * 100) + '%';
+            
+            buildCharts(bookings);
+            buildMonthlyTable(bookings);
+            buildAgencyTable(bookings);
+            buildAgencyCommissionsTable(bookings);
+            buildAgencyBookingsTable(bookings);
+            buildBookingsTable(bookings);
+        }
+
+        function buildCharts(bookings) {
+            const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+            const monthlyRev = Array(12).fill(0);
+            const monthlyNights = Array(12).fill(0);
+            
+            bookings.forEach(b => {
+                monthlyRev[b.checkIn.getMonth()] += b.revenue;
+                let d = new Date(b.checkIn);
+                while (d < b.checkOut) {
+                    monthlyNights[d.getMonth()]++;
+                    d.setDate(d.getDate() + 1);
+                }
+            });
+            
+            if (charts.rev) charts.rev.destroy();
+            charts.rev = new Chart(document.getElementById('revenueChart'), {
+                type: 'line',
+                data: {
+                    labels: months,
+                    datasets: [{
+                        label: 'Revenue',
+                        data: monthlyRev,
+                        borderColor: '#185FA5',
+                        backgroundColor: 'rgba(24,95,165,0.1)',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.3
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {legend: {display: false}},
+                    scales: {y: {beginAtZero: true}}
+                }
+            });
+            
+            if (charts.occ) charts.occ.destroy();
+            charts.occ = new Chart(document.getElementById('occupancyChart'), {
+                type: 'bar',
+                data: {
+                    labels: months,
+                    datasets: [{
+                        label: 'Nights booked',
+                        data: monthlyNights,
+                        backgroundColor: '#BA7517'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {legend: {display: false}},
+                    scales: {y: {beginAtZero: true}}
+                }
+            });
+        }
+
+        function buildMonthlyTable(bookings) {
+            const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+            const days = [31,28,31,30,31,30,31,31,30,31,30,31];
+            const data = Array(12).fill(0).map(() => ({nights:0, rev:0}));
+            
+            bookings.forEach(b => {
+                let d = new Date(b.checkIn);
+                while (d < b.checkOut) {
+                    data[d.getMonth()].nights++;
+                    d.setDate(d.getDate() + 1);
+                }
+                data[b.checkIn.getMonth()].rev += b.revenue;
+            });
+            
+            let html = '';
+            data.forEach((d, i) => {
+                const occ = Math.round((d.nights / days[i]) * 100);
+                const avgPerNight = d.nights > 0 ? Math.round(d.rev / d.nights) : 0;
+                html += `<tr><td>${months[i]}</td><td style="text-align:right;">${d.nights}</td><td style="text-align:right;">${days[i]}</td><td style="text-align:right;">${occ}%</td><td style="text-align:right;">€${Math.round(d.rev).toLocaleString('it-IT')}</td><td style="text-align:right;">€${avgPerNight.toLocaleString('it-IT')}</td></tr>`;
+            });
+            document.getElementById('monthlyTable').innerHTML = html;
+        }
+
+        function buildAgencyTable(bookings) {
+            const agencies = {};
+            bookings.forEach(b => {
+                if (b.agency === 'diretto') return; // Skip diretto
+                
+                if (!agencies[b.agency]) agencies[b.agency] = {rev:0, books:0, nights:0};
+                agencies[b.agency].rev += b.revenue;
+                agencies[b.agency].books += 1;
+                agencies[b.agency].nights += b.nights;
+            });
+            
+            const sorted = Object.entries(agencies).sort((a,b) => b[1].rev - a[1].rev);
+            const names = sorted.map(a => a[0]);
+            const revs = sorted.map(a => Math.round(a[1].rev));
+            
+            if (charts.agency) charts.agency.destroy();
+            charts.agency = new Chart(document.getElementById('agencyChart'), {
+                type: 'doughnut',
+                data: {
+                    labels: names,
+                    datasets: [{
+                        data: revs,
+                        backgroundColor: ['#185FA5','#0F6E56','#BA7517','#D85A30','#534AB7','#639922','#1D9E75','#D4537E']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {legend: {display: false}}
+                }
+            });
+            
+            const totalRev = sorted.reduce((s, a) => s + a[1].rev, 0);
+            const totalNights = sorted.reduce((s, a) => s + a[1].nights, 0);
+            
+            let html = '';
+            sorted.forEach(([agency, d]) => {
+                const rPct = Math.round((d.rev / totalRev) * 1000) / 10;
+                const nPct = Math.round((d.nights / totalNights) * 1000) / 10;
+                const perNight = Math.round(d.rev / d.nights);
+                html += `<tr><td>${agency}</td><td style="text-align:right;">${d.books}</td><td style="text-align:right;">${d.nights}</td><td style="text-align:right;">€${Math.round(d.rev).toLocaleString('it-IT')}</td><td style="text-align:right;">${rPct}%</td><td style="text-align:right;">${nPct}%</td><td style="text-align:right;">€${perNight.toLocaleString('it-IT')}</td></tr>`;
+            });
+            document.getElementById('agencyTable').innerHTML = html;
+        }
+
+        function buildAgencyCommissionsTable(bookings) {
+            const agencies = {};
+            
+            bookings.forEach(b => {
+                if (b.agency === 'diretto') return; // Skip diretto
+                
+                if (!agencies[b.agency]) agencies[b.agency] = {commissions:0, books:0, revenue:0};
+                agencies[b.agency].revenue += b.revenue;
+                agencies[b.agency].books += 1;
+                
+                // Use percentage-based commission for Le Collectionist and AMA, otherwise use column J value
+                if (b.agency === 'Le Collectionist') {
+                    agencies[b.agency].commissions += b.revenue * 0.20;
+                } else if (b.agency === 'AMA selection') {
+                    agencies[b.agency].commissions += b.revenue * 0.15;
+                } else {
+                    agencies[b.agency].commissions += b.commissionPartner;
+                }
+            });
+            
+            const sorted = Object.entries(agencies).sort((a,b) => b[1].commissions - a[1].commissions);
+            const totalCommissions = sorted.reduce((s, a) => s + a[1].commissions, 0);
+            const totalRevenue = sorted.reduce((s, a) => s + a[1].revenue, 0);
+            
+            let html = '';
+            sorted.forEach(([agency, d]) => {
+                const avgComm = Math.round(d.commissions / d.books);
+                const commPercent = Math.round((d.commissions / d.revenue) * 1000) / 10;
+                html += `<tr><td>${agency}</td><td style="text-align:right;">${d.books}</td><td style="text-align:right;">€${Math.round(d.commissions).toLocaleString('it-IT')}</td><td style="text-align:right;">€${avgComm.toLocaleString('it-IT')}</td><td style="text-align:right;">${commPercent}%</td></tr>`;
+            });
+            
+            if (sorted.length > 0) {
+                const totalBooks = sorted.reduce((s, a) => s + a[1].books, 0);
+                html += `<tr style="font-weight: 600; border-top: 1px solid #ddd;"><td>Total</td><td style="text-align:right;">${totalBooks}</td><td style="text-align:right;">€${Math.round(totalCommissions).toLocaleString('it-IT')}</td><td style="text-align:right;">€${Math.round(totalCommissions / totalBooks).toLocaleString('it-IT')}</td><td style="text-align:right;">${Math.round((totalCommissions / totalRevenue) * 1000) / 10}%</td></tr>`;
+            }
+            
+            document.getElementById('agencyCommissionsTable').innerHTML = html;
+        }
+
+        function buildBookingsTable(bookings) {
+            let html = '';
+            bookings.forEach((b, i) => {
+                const date = b.checkIn.toLocaleDateString('en-US', {month:'short', day:'numeric'});
+                html += `<tr><td>${i+1}</td><td>${b.guest}</td><td>${date}</td><td style="text-align:right;">${b.nights}</td><td style="text-align:right;">€${Math.round(b.revenue).toLocaleString('it-IT')}</td><td>${b.agency}</td></tr>`;
+            });
+            document.getElementById('bookingsTable').innerHTML = html;
+        }
+
+        function buildAgencyBookingsTable(bookings) {
+            const agenciesMap = {};
+            
+            bookings.forEach(b => {
+                if (b.agency === 'diretto') return; // Skip diretto
+                
+                if (!agenciesMap[b.agency]) {
+                    agenciesMap[b.agency] = [];
+                }
+                agenciesMap[b.agency].push(b);
+            });
+            
+            const sortedAgencies = Object.keys(agenciesMap).sort();
+            
+            let html = '';
+            sortedAgencies.forEach(agency => {
+                const agencyBookings = agenciesMap[agency];
+                agencyBookings.forEach((b, idx) => {
+                    const date = b.checkIn.toLocaleDateString('en-US', {month:'short', day:'numeric'});
+                    const agencyName = idx === 0 ? agency : '';
+                    html += `<tr>
+                        <td>${agencyName}</td>
+                        <td>${b.guest}</td>
+                        <td>${date}</td>
+                        <td style="text-align:right;">${b.nights}</td>
+                        <td style="text-align:right;">€${Math.round(b.revenue).toLocaleString('it-IT')}</td>
+                    </tr>`;
+                });
+            });
+            document.getElementById('agencyBookingsTable').innerHTML = html;
+        }
+
+        function switchTab(tab, e) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.tab-button').forEach(el => el.classList.remove('active'));
+            document.getElementById(tab).classList.add('active');
+            e.target.classList.add('active');
+        }
+    </script>
+</body>
+</html>
