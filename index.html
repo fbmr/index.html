@@ -213,7 +213,7 @@
 
         th {
             text-align: left;
-            padding: 12px 0;
+            padding: 12px 8px;
             font-weight: 600;
             color: #666;
             border-bottom: 0.5px solid #ddd;
@@ -222,8 +222,15 @@
             letter-spacing: 0.5px;
         }
 
+        .sort-indicator {
+            opacity: 0.5;
+            font-size: 10px;
+            margin-left: 4px;
+            transition: all 0.2s;
+        }
+
         td {
-            padding: 12px 0;
+            padding: 12px 8px;
             color: #333;
             border-bottom: 0.5px solid #eee;
         }
@@ -473,12 +480,27 @@
                     <table>
                         <thead>
                             <tr>
-                                <th>#</th>
-                                <th>Guest</th>
-                                <th>Check-in</th>
-                                <th style="text-align: right;">Nights</th>
-                                <th style="text-align: right;">Revenue</th>
-                                <th>Agency</th>
+                                <th style="cursor: pointer;" onclick="sortBookings('index')">
+                                    # <span class="sort-indicator">↕</span>
+                                </th>
+                                <th style="cursor: pointer;" onclick="sortBookings('guest')">
+                                    Guest <span class="sort-indicator">↕</span>
+                                </th>
+                                <th style="cursor: pointer; text-align: right;" onclick="sortBookings('checkIn')">
+                                    Check-in <span class="sort-indicator">↕</span>
+                                </th>
+                                <th style="cursor: pointer; text-align: right;" onclick="sortBookings('checkOut')">
+                                    Check-out <span class="sort-indicator">↕</span>
+                                </th>
+                                <th style="cursor: pointer; text-align: right;" onclick="sortBookings('nights')">
+                                    Nights <span class="sort-indicator">↕</span>
+                                </th>
+                                <th style="cursor: pointer; text-align: right;" onclick="sortBookings('revenue')">
+                                    Revenue <span class="sort-indicator">↕</span>
+                                </th>
+                                <th style="cursor: pointer;" onclick="sortBookings('agency')">
+                                    Agency <span class="sort-indicator">↕</span>
+                                </th>
                             </tr>
                         </thead>
                         <tbody id="bookingsTable"></tbody>
@@ -494,6 +516,9 @@
         const DASHBOARD_PASSWORD = 'Lequile1234!'; // Change this to your desired password
         let charts = {};
         let isAuthenticated = false;
+        let allBookings = []; // Store bookings globally for sorting
+        let currentSortColumn = null;
+        let currentSortDirection = 'asc';
 
         // Password check function
         function checkPassword() {
@@ -638,7 +663,7 @@
                 const agency = cells[20] ? cells[20].trim() : '';
                 const nights = Math.floor((checkOut - checkIn) / (1000 * 60 * 60 * 24));
                 
-                if (nights > 0 && revenue > 0 && guest) {
+                if (revenue > 0 && guest) {
                     bookings.push({
                         guest: guest,
                         checkIn: checkIn,
@@ -896,12 +921,92 @@
         }
 
         function buildBookingsTable(bookings) {
+            allBookings = bookings;
+            renderBookingsTable(bookings);
+        }
+
+        function renderBookingsTable(bookings) {
             let html = '';
             bookings.forEach((b, i) => {
-                const date = b.checkIn.toLocaleDateString('en-US', {month:'short', day:'numeric'});
-                html += `<tr><td>${i+1}</td><td>${b.guest}</td><td>${date}</td><td style="text-align:right;">${b.nights}</td><td style="text-align:right;">€${Math.round(b.revenue).toLocaleString('it-IT')}</td><td>${b.agency}</td></tr>`;
+                const checkInDate = b.checkIn.toLocaleDateString('en-US', {month:'short', day:'numeric'});
+                const checkOutDate = b.checkOut.toLocaleDateString('en-US', {month:'short', day:'numeric'});
+                html += `<tr><td>${i+1}</td><td>${b.guest}</td><td style="text-align:right;">${checkInDate}</td><td style="text-align:right;">${checkOutDate}</td><td style="text-align:right;">${b.nights}</td><td style="text-align:right;">€${Math.round(b.revenue).toLocaleString('it-IT')}</td><td>${b.agency}</td></tr>`;
             });
             document.getElementById('bookingsTable').innerHTML = html;
+        }
+
+        function sortBookings(column) {
+            let sorted = [...allBookings];
+            
+            // Toggle direction if clicking same column
+            if (currentSortColumn === column) {
+                currentSortDirection = currentSortDirection === 'asc' ? 'desc' : 'asc';
+            } else {
+                currentSortDirection = 'asc';
+                currentSortColumn = column;
+            }
+            
+            // Sort based on column
+            sorted.sort((a, b) => {
+                let aVal, bVal;
+                
+                switch(column) {
+                    case 'index':
+                        aVal = allBookings.indexOf(a);
+                        bVal = allBookings.indexOf(b);
+                        break;
+                    case 'guest':
+                        aVal = a.guest.toLowerCase();
+                        bVal = b.guest.toLowerCase();
+                        break;
+                    case 'checkIn':
+                        aVal = a.checkIn;
+                        bVal = b.checkIn;
+                        break;
+                    case 'checkOut':
+                        aVal = a.checkOut;
+                        bVal = b.checkOut;
+                        break;
+                    case 'nights':
+                        aVal = a.nights;
+                        bVal = b.nights;
+                        break;
+                    case 'revenue':
+                        aVal = a.revenue;
+                        bVal = b.revenue;
+                        break;
+                    case 'agency':
+                        aVal = a.agency.toLowerCase();
+                        bVal = b.agency.toLowerCase();
+                        break;
+                }
+                
+                if (aVal < bVal) return currentSortDirection === 'asc' ? -1 : 1;
+                if (aVal > bVal) return currentSortDirection === 'asc' ? 1 : -1;
+                return 0;
+            });
+            
+            renderBookingsTable(sorted);
+            updateSortIndicators(column);
+        }
+
+        function updateSortIndicators(column) {
+            document.querySelectorAll('.sort-indicator').forEach(el => {
+                el.textContent = '↕';
+                el.style.opacity = '0.5';
+            });
+            
+            // Find the header for the current column and update it
+            document.querySelectorAll('th').forEach((th, idx) => {
+                const indicator = th.querySelector('.sort-indicator');
+                if (indicator) {
+                    const headers = ['index', 'guest', 'checkIn', 'checkOut', 'nights', 'revenue', 'agency'];
+                    if (headers[idx] === column) {
+                        indicator.textContent = currentSortDirection === 'asc' ? '↑' : '↓';
+                        indicator.style.opacity = '1';
+                    }
+                }
+            });
         }
 
         function buildAgencyBookingsTable(bookings) {
